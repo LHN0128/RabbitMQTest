@@ -1,0 +1,7 @@
+# Project exclude paths
+/quicktest-consumer/target/
+/quicktest-provider/target/
+/rabbitmq-advanced-consumer/target/
+/rabbitmq-advanced-producer/target/
+/spring-rabbitmq-consumer/target/
+/spring-rabbitmq-provider/target/
