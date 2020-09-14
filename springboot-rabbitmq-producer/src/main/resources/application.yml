@@ -1,0 +1,8 @@
+#RabbitMQ的基本配置
+spring:
+  rabbitmq:
+    host: localhost
+    port: 5672
+    virtual-host: chou's host
+    username: chouchou
+    password: chouchou

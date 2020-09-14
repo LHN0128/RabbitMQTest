@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context
+       https://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/rabbit
+       http://www.springframework.org/schema/rabbit/spring-rabbit.xsd">
+    <!--加载配置文件-->
+    <context:property-placeholder location="classpath:rabbitmq.properties"/>
+
+    <!-- 定义rabbitmq connectionFactory。定义消息可靠性投递publisher-confirms,publisher-returns-->
+    <rabbit:connection-factory id="connectionFactory" host="${rabbitmq.host}"
+                               port="${rabbitmq.port}"
+                               username="${rabbitmq.username}"
+                               password="${rabbitmq.password}"
+                               virtual-host="${rabbitmq.virtual-host}" />
+
+    <context:component-scan base-package="com.rabbitmq.listener"/>
+<!--    定义监听器容器-->
+    <rabbit:listener-container connection-factory="connectionFactory" acknowledge="manual" prefetch="10">
+<!--        测试时只有一个监听器，防止其他监听器消费-->
+<!--        <rabbit:listener ref="ackListener" queue-names="spring_queue_confirm"/>-->
+
+
+<!--        <rabbit:listener ref="qosListener" queue-names="spring_queue_confirm"/>-->
+<!--        定义一个监听器,监听正常队列.当业务出错拒收时才转入死信队列-->
+<!--        <rabbit:listener ref="dlxListener" queue-names="test_queue"/>-->
+<!--            定义一个监听器,监听死信队列.否则消息一来就收到了.而我们是要等待-->
+        <rabbit:listener ref="orderListener" queue-names="order_queue_dlx"/>
+    </rabbit:listener-container>
+</beans>

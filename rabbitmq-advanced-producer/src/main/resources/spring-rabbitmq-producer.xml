@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:rabbit="http://www.springframework.org/schema/rabbit"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context
+       https://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/rabbit
+       http://www.springframework.org/schema/rabbit/spring-rabbit.xsd">
+    <!--加载配置文件-->
+    <context:property-placeholder location="classpath:rabbitmq.properties"/>
+
+    <!-- 定义rabbitmq connectionFactory。定义消息可靠性投递publisher-confirms,publisher-returns-->
+    <rabbit:connection-factory id="connectionFactory" host="${rabbitmq.host}"
+                               port="${rabbitmq.port}"
+                               username="${rabbitmq.username}"
+                               password="${rabbitmq.password}"
+                               virtual-host="${rabbitmq.virtual-host}" publisher-confirms="true" publisher-returns="true"/>
+    <!--定义管理交换机、队列-->
+    <rabbit:admin connection-factory="connectionFactory"/>
+
+    <rabbit:queue id="spring_queue_confirm" name="spring_queue_confirm"    auto-declare="true"/>
+
+    <!--定义路由类型交换机direct_exchange；并绑定一个队列-->
+    <rabbit:direct-exchange name="test_exchange_confirm">
+        <rabbit:bindings>
+            <rabbit:binding queue="spring_queue_confirm" key="confirm"></rabbit:binding>
+        </rabbit:bindings>
+    </rabbit:direct-exchange>
+
+
+
+<!--    TTL队列的定义和交换机绑定设置-->
+    <rabbit:queue name="test_ttl_queue" id="test_ttl_queue">
+<!--        设置队列的过期时间-->
+        <rabbit:queue-arguments>
+            <entry key="x-message-ttl" value="10000" value-type="java.lang.Integer"></entry>
+        </rabbit:queue-arguments>
+    </rabbit:queue>
+    <rabbit:topic-exchange name="test_ttl_exchange">
+        <rabbit:bindings>
+            <rabbit:binding pattern="ttl.#" queue="test_ttl_queue"></rabbit:binding>
+        </rabbit:bindings>
+    </rabbit:topic-exchange>
+<!--    死信队列设置-->
+<!--        1、声明正常的队列（test_queue_dlx）和交换机(test_exchange_dlx)-->
+
+
+    <rabbit:queue name="test_queue_dlx" id="test_queue_dlx">
+        <!--        3、将正常队列和死信交换机绑定，设置两个参数-->
+        <rabbit:queue-arguments>
+            <!--            设置死信交换机名称-->
+            <entry key="x-dead-letter-exchange" value="exchange_dlx"></entry>
+            <!--            设置队列发送给死信交换机的路由key-->
+            <entry key="x-dead-letter-routing-key" value="dlx.test"></entry>
+
+<!--            设置消息的过期时间10000ms-->
+            <entry key="x-message-ttl" value="10000" value-type="java.lang.Integer"></entry>
+<!--            设置队列的长度限制10条 -->
+            <entry key="x-max-length" value="10" value-type="java.lang.Integer"></entry>
+        </rabbit:queue-arguments>
+    </rabbit:queue>
+    <rabbit:topic-exchange name="test_exchange_dlx">
+        <rabbit:bindings>
+            <rabbit:binding pattern="test.dlx.#" queue="test_queue_dlx"></rabbit:binding>
+        </rabbit:bindings>
+    </rabbit:topic-exchange>
+
+
+
+    <!--        2、声明一个死信队列(queue_dlx)和死信交换机（exchange_dlx），将这个队列绑定死信交换机-->
+    <rabbit:queue name="queue_dlx" id="queue_dlx"></rabbit:queue>
+    <rabbit:topic-exchange name="exchange_dlx">
+        <rabbit:bindings>
+<!--            这里设置死信交换机和队列绑定的routingkey-->
+             <rabbit:binding pattern="dlx.#" queue="queue_dlx"></rabbit:binding>
+        </rabbit:bindings>
+    </rabbit:topic-exchange>
+    
+    
+<!--        实现延迟队列-->
+<!--    定义正常交换机(order_exchange)和正常队列(order_queue)-->
+    <rabbit:queue name="order_queue" id="order_queue">
+        <rabbit:queue-arguments>
+            <!--            设置死信交换机名称-->
+            <entry key="x-dead-letter-exchange" value="order_exchange_dlx"></entry>
+            <!--            设置队列发送给死信交换机的路由key-->
+            <entry key="x-dead-letter-routing-key" value="dlx.order.cancel"></entry>
+            <!--            设置消息的过期时间10000ms-->
+            <entry key="x-message-ttl" value="10000" value-type="java.lang.Integer"></entry>
+        </rabbit:queue-arguments>
+    </rabbit:queue>
+    
+    <rabbit:topic-exchange name="order_exchange">
+        <rabbit:bindings>
+            <rabbit:binding pattern="order.#" queue="order_queue"></rabbit:binding>
+        </rabbit:bindings>
+    </rabbit:topic-exchange>
+
+
+<!--    定义死信队列(order_queue_dlx)和死信交换机(order_exchange_dlx)-->
+    <rabbit:queue name="order_queue_dlx" id="order_queue_dlx"></rabbit:queue>
+
+    <rabbit:topic-exchange name="order_exchange_dlx" id="order_exchange_dlx">
+        <rabbit:bindings>
+            <rabbit:binding pattern="dlx.order.#" queue="order_queue_dlx"></rabbit:binding>
+        </rabbit:bindings>
+    </rabbit:topic-exchange>
+
+
+
+
+
+    <!--定义rabbitTemplate对象操作可以在代码中方便发送消息-->
+    <rabbit:template id="rabbitTemplate" connection-factory="connectionFactory"/>
+</beans>
